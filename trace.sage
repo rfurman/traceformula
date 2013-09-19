@@ -6,8 +6,6 @@
 # I just want to get something working quickly, which will probably
 # run slowly.
 
-R = RealField(53)
-
 def getpoly(k):
     t,n = QQ['t,n'].gens()
     last = 1+0*t
@@ -18,17 +16,17 @@ def getpoly(k):
     return cur
 
 def psi(N):
-    S = R(1)
+    S = RR(1)
     for (p,e) in factor(N):
-        S = S * (1.0 + 1/R(p))
+        S = S * (1.0 + 1/RR(p))
     S = S * N
     return S
 
 # for now the character is going to be trivial...
 
-def A1(n, N, k):
+def A1(n, N, k, chi):
     if is_square(n) and gcd(n,N)==1:
-        return psi(N)*(k-1)/12 * n^(k/2-1)
+        return CC(psi(N)*(k-1)/12 * n^(k/2-1)*CC(chi(sqrt(n))))
     return 0
 
 def hw(d):
@@ -56,11 +54,11 @@ def countroots(t, n, f, N):
     g = x^2 - t*n + n
     #blah ablah blahasfdadf
 
-def mubad(t, f, n, N):
+def mubad(t, f, n, N, chi):
     S = 0
     for x in range(N):
         if (x*x-t*x+n)%(N*gcd(N,f))==0 and gcd(x,N)==1:
-            S+=1
+            S+=CC(chi(x))
     S = S * psi(N)/psi(N/gcd(N,f))
     return S
 
@@ -73,11 +71,11 @@ def mu(t, f, n, N):
     for (p,e) in factor(N * gcd(N,f)): # this probably isn't right...
         S = S * (1 + kronecker_symbol(a, p))
 
-    S = R(S)
+    S = RR(S)
     S = S * psi(N)/psi(N/gcd(N,f))
     return S
 
-def A2(n, N, poly):
+def A2(n, N, poly, chi):
     S = 0
     bound = ceil(2*sqrt(n))-1
     for t in range(-bound, bound+1):
@@ -85,28 +83,31 @@ def A2(n, N, poly):
         for f in divisors(4*n - t*t):
             if (t*t-4*n) % (f*f) == 0:
                 a = (t*t - 4*n)/(f*f)
-                S2 = S2 + RR(hw(a)*mubad(t, f, n, N))
+                S2 = S2 + CC(hw(a)*mubad(t, f, n, N, chi))
         S = S + S2 * poly(t,n)
 
     return -.5 * S
 
-def A3(n, N, k):
+def A3(n, N, k, chi):
     S1 = 0
     for d in divisors(n):
         S2 = 0
         for c in divisors(N):
-             if gcd(d,c)==1 and gcd(n/d,N/c)==1 and gcd(N,n/d-d)%gcd(c,N/c)==0:
-                 S2 += euler_phi(gcd(c,N/c))
+            if gcd(d,c)==1 and gcd(n/d,N/c)==1 and gcd(N,n/d-d)%gcd(c,N/c)==0:
+                y = CRT(d,ZZ(n/d),c,ZZ(N/c))
+                S2 += euler_phi(gcd(c,N/c)) * CC(chi(y))
         S1 += S2 * min(d,n/d)^(k-1)
     return -S1/2
 
-def A4(n,N,k):
+def A4(n,N,k, chi):
     S1 = 0
-    if k==2: # and chi==1
+    if k==2 and chi.is_trivial():
         for t in divisors(n):
             if gcd(N,n/t)==1:
                 S1+=t
     return S1
 
-def TrT(n, N, k):
-    return A1(n,N,k)+A2(n,N,getpoly(k-2))+A3(n,N,k)+A4(n,N,k)
+def TrT(n, N, k, chi=None):
+    if chi is None:
+        chi = DirichletGroup(N, base_ring=QQ)[0] # trivial character
+    return A1(n,N,k,chi)+A2(n,N,getpoly(k-2),chi)+A3(n,N,k,chi)+A4(n,N,k,chi)
