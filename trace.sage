@@ -66,7 +66,7 @@ def mu(t, f, n, N):
     # assume N is odd (and squarefree?)
     S = 1
     a = (t^2 - 4*n)/(f*f)
-    if gcd(a,N) is not 1:
+    if gcd(a,N)!=1:
         return 0
     for (p,e) in factor(N * gcd(N,f)): # this probably isn't right...
         S = S * (1 + kronecker_symbol(a, p))
@@ -110,4 +110,6 @@ def A4(n,N,k, chi):
 def TrT(n, N, k, chi=None):
     if chi is None:
         chi = DirichletGroup(N, base_ring=QQ)[0] # trivial character
+    if chi(-1) != (-1)^(k%2):
+        return 0
     return A1(n,N,k,chi)+A2(n,N,getpoly(k-2),chi)+A3(n,N,k,chi)+A4(n,N,k,chi)
