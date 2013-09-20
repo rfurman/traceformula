@@ -15,11 +15,15 @@ def getpoly(k):
         cur, last = t*cur - n*last, cur
     return cur
 
+psi_memo = {}
+
 def psi(N):
-    S = RR(1)
+    if N in psi_memo:
+        return psi_memo[N]
+    S = N
     for (p,e) in factor(N):
-        S = S * (1.0 + 1/RR(p))
-    S = S * N
+        S = ZZ ( S * (p+1) / p )
+    psi_memo[N] = S
     return S
 
 # for now the character is going to be trivial...
@@ -29,7 +33,11 @@ def A1(n, N, k, chi):
         return CC(psi(N)*(k-1)/12 * n^(k/2-1)*CC(chi(sqrt(n))))
     return 0
 
+hw_memo = {}
+
 def hw(d):
+    if d in hw_memo:
+        return hw_memo[d] 
     D = fundamental_discriminant(d)
     f = sqrt(d/D)
 
@@ -39,12 +47,14 @@ def hw(d):
 
     S = S * QuadraticField(D).class_number()
     if d % 4 in [2,3]:
+        hw_memo[d]=0
         return 0
     if D == -3:
         S = S/3
     elif D == -4:
         S = S/2
     S = f*S
+    hw_memo[d]=S
     return S
 
 def countroots(t, n, f, N):
@@ -56,16 +66,17 @@ def countroots(t, n, f, N):
 
 def mubad(t, f, n, N, chi):
     S = 0
-    for x in srange(N):
-        if (x*x-t*x+n)%(N*gcd(N,f))==0 and gcd(x,N)==1:
+    Nf = gcd(N,f)
+    for x in range(N):
+        if ZZ(N*Nf).divides(x*x-t*x+n) and gcd(x,N)==1:
             S+=CC(chi(x))
-    S = S * psi(N)/psi(N/gcd(N,f))
+    S = S * psi(N)/psi(ZZ(N/gcd(N,f)))
     return S
 
 def mu(t, f, n, N):
     # assume N is odd (and squarefree?)
     S = 1
-    a = (t^2 - 4*n)/(f*f)
+    a = ZZ((t^2 - 4*n)/(f*f))
     if gcd(a,N) != 1:
         return 0
     for (p,e) in factor(N * gcd(N,f)): # this probably isn't right...
@@ -82,7 +93,7 @@ def A2(n, N, poly, chi):
         S2 = 0
         for f in divisors(4*n - t*t):
             if (t*t-4*n) % (f*f) == 0:
-                a = (t*t - 4*n)/(f*f)
+                a = ZZ((t*t - 4*n)/(f*f))
                 S2 = S2 + CC(hw(a)*mubad(t, f, n, N, chi))
         S = S + S2 * poly(t,n)
 
@@ -93,17 +104,17 @@ def A3(n, N, k, chi):
     for d in divisors(n):
         S2 = 0
         for c in divisors(N):
-            if gcd(d,c)==1 and gcd(n/d,N/c)==1 and gcd(N/chi.conductor(),n/d-d)%gcd(c,N/c)==0:
+            if gcd(d,c)==1 and gcd(ZZ(n/d),ZZ(N/c))==1 and gcd(ZZ(N/chi.conductor()),ZZ(n/d)-d)%gcd(c,ZZ(N/c))==0:
                 y = CRT(d,ZZ(n/d),c,ZZ(N/c))
-                S2 += euler_phi(gcd(c,N/c)) * CC(chi(y))
-        S1 += S2 * min(d,n/d)^(k-1)
+                S2 += euler_phi(gcd(c,ZZ(N/c))) * CC(chi(y))
+        S1 += S2 * min(d,ZZ(n/d))^(k-1)
     return -S1/2
 
 def A4(n,N,k, chi):
     S1 = 0
     if k==2 and chi.is_trivial():
         for t in divisors(n):
-            if gcd(N,n/t)==1:
+            if gcd(N,ZZ(n/t))==1:
                 S1+=t
     return S1
 
@@ -138,7 +149,8 @@ def TrTnew(n, N, k, chi=None):
         return 0
     sum = 0
     for d in divisors(N/Nx):
-        sum += moebius2(prime_to_m_part(d,n)) * moebius(d/prime_to_m_part(d,n)) * TrT(n, N/d, k, chi)
+      if TrT(1, ZZ(N/d), k, chi) != 0:
+        sum += moebius2(prime_to_m_part(d,n)) * moebius(d/prime_to_m_part(d,n)) * TrT(n, ZZ(N/d), k, chi)
     return sum
 
 def first_d_relatively_prime_to_n(d, n):
