@@ -2,8 +2,11 @@
 #include <algorithm>
 #include <iostream>
 #include <cassert>
-typedef long long i64;
+#include <boost/multiprecision/gmp.hpp> 
 using namespace std;
+using namespace boost::multiprecision;
+//typedef long long i64;
+typedef mpz_int i64;
 
 #define POLY(I, EXPR) int poly##I(int t, int n) { return EXPR; }
 #define for_prime_factors(N) for(int p=2; (p*p<=(N) || (p=(N))) && p>1; p++) if((N)%p==0)
@@ -60,8 +63,14 @@ int valuation(int N, int p) {
     return ret;
 }
 
-int evalpoly(int k, int t, int n) {
-    int val[2];
+i64 evalpoly(int k, int t, int n) {
+    if(k==10) {
+        long long tt = t*t;
+        return - n*n*n*n*n + tt * (15*n*n*n*n + tt * (-35*n*n*n + tt * (28*n*n + tt * (-9*n + tt))));
+        //return i64(n*n*n)*(-35*tt*tt+15*tt*n-n*n) + i64(tt*tt*tt)*(28*n*n-9*tt*n+tt*tt);
+    }
+
+    i64 val[2];
     val[0]=1;
     val[1]=t;
     if(k<2) return val[k];
@@ -79,26 +88,28 @@ int classnumber(int D) {
     return ret;
 }
 
+//#define pow boost::multiprecision::pow
+
 void allTrThat12(int M, int N, int k) {
     i64 vals[N][M];
-    memset(vals,0,sizeof(vals));
+    //memset(vals,0,sizeof(vals));
     int phiN = phi(N);
 
     // A1
     int psiN = psi(N);
     if(true) for(int n=1; n*n<M; n++) if(__gcd(n,N)==1) {
-        vals[n%N][n*n] += phiN * psiN * (k-1) * pow(n, k-2);
+        vals[n%N][n*n] += (phiN * psiN * (k-1)) * pow((i64)n, k-2);
     }
 
     // A2
-    int bound=sqrt(4*M)+3;
+    int bound=sqrt(4*M)+1;
     if(true) for(int t=-bound; t<=bound; t++) {
         for(int y=0; y<N; y++) {
             int n = ((t*y-y*y)%N+N)%N;
             n += (t*t/4)/N*N-N;
             while(t*t>=4*n) n+=N;
             for(; n<M; n+=N) {
-                i64 D = -sqfree(4*n-t*t);
+                int D = -sqfree(4*n-t*t);
                 if(D%4==-2 || D%4==-1) D*=4;
                 int S2 = classnumber(D);
                 int X = round(sqrt((t*t-4*n)/D));
@@ -132,12 +143,14 @@ void allTrThat12(int M, int N, int k) {
 
     // A3
     if(true) for(int d=1; d<M; d++) {
-        for(int n=d; n<M; n+=d) {
+        for(int n=d; n<min(M,d*d+1); n+=d) {
+            i64 p = pow((i64)min(d,n/d),k-1);
+            int S2=0;
             for(int a=0; a<N; a++) {
-                i64 c1=N/__gcd(N,abs(n/d-a));
-                i64 c2 = __gcd(N,abs(d-a));
+                int c1=N/__gcd(N,abs(n/d-a));
+                int c2 = __gcd(N,abs(d-a));
                 if(c2%c1==0) {
-                    vals[a][n] -= phiN*6*number_of_divisors(c2/c1)*pow(min(d,n/d),k-1);
+                    vals[a][n] -= phiN*(d*d==N?6:12)*number_of_divisors(c2/c1)*p;
                 }
             }
         }
@@ -154,12 +167,17 @@ void allTrThat12(int M, int N, int k) {
         }
     }
 
-    for(int a=0; a<N; a++) {
+    /*for(int a=0; a<N; a++) {
         for(int n=1; n<M; n++) {
             cout << vals[a][n] << " ";
         }
         cout << endl;
-    }
+    }*/
+    cout << vals[0][0] << " " << vals[0][50] << endl;
+}
+
+void allTrThat12new(int M, int N, int k) {
+    //for(int d=1; d<=N; d++) if(N%d==1
 }
 
 int main(void) {
@@ -167,5 +185,8 @@ int main(void) {
 
         int M=100;
 
-        allTrThat12(40, 9, 4);
+        for(int i=0; i<300; i++)
+            allTrThat12(100, 1, 12);
+
+        exit(0);
 }
