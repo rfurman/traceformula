@@ -127,13 +127,6 @@ def A2hat_additive(n, N, poly, a):
 
 cl_memo = {}
 
-# sum(p^i for i in range(a,b))
-def geometric_series(p,a,b):
-    #return sum(p^i for i in range(a,b))
-    return (p^b-p^a)/(p-1)
-
-
-# Doesn't work yet
 def A2hat_multiplicative(n, N, poly, y):
     S = 0
     bound = ceil(2*sqrt(n))-1
@@ -145,21 +138,12 @@ def A2hat_multiplicative(n, N, poly, y):
             S2 = cl_memo[D]
         else:
             S2 = cl_memo[D] = QuadraticField(D).class_number()
-        if D == -3:
-            S2 = 1/3
-        elif D == -4:
-            S2 = 1/2
 
         for (p,c) in factor(ZZ(sqrt((t*t-4*n)/D))):
             a = valuation(N, p)
             d = valuation(y*y-t*y+n, p)
             S3 = 0
             kDp = p-kronecker(D,p)
-
-            #S3a = 0
-            #for b in range(0,(c-e)/2+1):
-                #if d>=a+min(a,b):
-                    #S3a = S3a + p^((c-e)/2-b) * (kDp if e==0 and b<c/2 else p) * p^min(a,b) * (p+1 if b>=a and a>0 else p) / p^2
 
             if a==0:
                 S3 = 1+kDp*(p^c-1)/(p-1)
@@ -169,20 +153,12 @@ def A2hat_multiplicative(n, N, poly, y):
                 elif c<=d-a:
                     S3 = p^c
                 S3 = S3 + p^(c-1) *  kDp * max(0,min(c,a,d-a+1))
-            #elif a>0 and e>0:
-                #if d>=2*a:
-                    #S3 = (p+1)*(p^((c-e)/2)-p^(a-1))/(p-1)
-                #S3 = S3 + p^((c-e)/2) * max(0,min((c-e)/2+1,a,d-a+1))
-            #if a==0:
-            #    S3 = 1+sum(p^b-kronecker(D,p)*p^(b-1) for b in range(1,c/2+1))
-            #else:
-                #S3 = 1+sum((p^b-kronecker(D,p)*p^(b-1))*p^b for b in range(1,min(c/2+1,d-a+1,a)))
-                #S3 += sum(p^b-kronecker(D,p)*p^(b-1) for b in range(a,min(c/2+1,d-a+1)))*(p^a+p^(a-1))
-                #if a<=d/2:
-                    #S3 = S3 + sum(p^b-kronecker(D,p)*p^(b-1) for b in range(a,min(c/2+1,d-a+1)))*(p^a+p^(a-1))
-            #if S3 != S3a: print [p,a,b,c,d,e,D, S3, S3a]
             S2 = S2 * S3
 
+        if D == -3:
+            S2 /= 3
+        elif D == -4:
+            S2 /= 2
         S = S + S2 * poly(t,n)
 
     return -S/2
