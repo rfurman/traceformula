@@ -62,13 +62,6 @@ def hw(d):
     hw_memo[d]=S
     return S
 
-def countroots(t, n, f, N):
-    R1 = Integers(N*gcd(N,f))
-    S = PolynomialRing(R1, 'x')
-    x = S.gen()
-    g = x^2 - t*n + n
-    #blah ablah blahasfdadf
-
 def mubad(t, f, n, N, chi):
     S = 0
     Nf = gcd(N,f)
@@ -85,19 +78,6 @@ def muhat(t, f, n, N, a):
         return psi(N)/psi(ZZ(N/gcd(N,f)))
     else:
         return 0
-
-def mu(t, f, n, N):
-    # assume N is odd (and squarefree?)
-    S = 1
-    a = ZZ((t^2 - 4*n)/(f*f))
-    if gcd(a,N) != 1:
-        return 0
-    for (p,e) in factor(N * gcd(N,f)): # this probably isn't right...
-        S = S * (1 + kronecker_symbol(a, p))
-
-    S = RR(S)
-    S = S * psi(N)/psi(N/gcd(N,f))
-    return S
 
 def A2(n, N, poly, chi):
     S = 0
@@ -174,14 +154,18 @@ def A3(n, N, k, chi):
         S1 += S2 * min(d,ZZ(n/d))^(k-1)
     return -S1/2
 
-# Let's assume that N is squarefree
 def A3hat(n, N, k, a):
     S1 = 0
     for d in divisors(n):
         S2 = 0
-        for c in divisors(N):
-            if (d-a)%c == 0 and (n/d-a)%(N/c)==0:
-                S2 += 1
+        # c divides N, divides d-a, and is a multiple of N/gcd(N,n/d-a)
+        c1 = ZZ(N/(gcd(N,n/d-a)))
+        c2 = gcd(N,d-a)
+        if c1.divides(c2):
+            S2 = sigma(c2/c1,0)
+        #for c in divisors(gcd(N,d-a)):
+            #if (n/d-a)%(N/c)==0:
+                #S2 += euler_phi(gcd(c,N/c))
         S1 += S2 * min(d,ZZ(n/d))^(k-1)
     return -S1/2
 
