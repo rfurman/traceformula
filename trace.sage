@@ -199,8 +199,8 @@ def TrT(n, N, k, chi=None):
         chi = DirichletGroup(N, base_ring=QQ)[0] # trivial character
     if n==0:
         return 0
-    if chi(-1) != (-1)^(k%2):
-        return 0
+    #if chi(-1) != (-1)^(k%2):
+    #    return 0
     return A1(n,N,k,chi)+A2(n,N,getpoly(k-2),chi)+A3(n,N,k,chi)+A4(n,N,k,chi)
 
 def allTrThat(M, N, k):
@@ -209,7 +209,8 @@ def allTrThat(M, N, k):
 
 def allTrT(M, N, k):
     astar = [i for i in range(N) if gcd(i,N)==1]
-    chars = [g for g in DirichletGroup(N) if g(-1)==(-1)^k]
+    #chars = [g for g in DirichletGroup(N) if g(-1)==(-1)^k]
+    chars = [g for g in DirichletGroup(N)]
     fourier = matrix( [ [ char(a).conjugate() for a in astar ] for char in chars ] )
     return fourier * allTrThat(M, N, k)
 
