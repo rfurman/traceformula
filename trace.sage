@@ -230,6 +230,7 @@ def moebius2(n):
 def TrTnew(n, N, k, chi=None):
     if chi is None:
         Nx = 1
+        chi = DirichletGroup(N, base_ring=QQ)[0]
     else:
         Nx = chi.conductor()
     if n==0:
@@ -237,7 +238,7 @@ def TrTnew(n, N, k, chi=None):
     sum = 0
     for d in divisors(N/Nx):
       if TrT(1, ZZ(N/d), k, chi) != 0:
-        sum += moebius2(prime_to_m_part(d,n)) * moebius(d/prime_to_m_part(d,n)) * TrT(n, ZZ(N/d), k, chi)
+        sum += moebius2(prime_to_m_part(d,n)) * moebius(d/prime_to_m_part(d,n)) * TrT(n, ZZ(N/d), k, chi.primitive_character().extend(N/d))
     return sum
 
 # Warning! wrong answer when gcd(n,N^infty) is not square-free
@@ -275,13 +276,15 @@ def first_d_relatively_prime_to_n(d, n):
 # * v should start with a 0
 # * v should be of length at least 4*p*d^2
 # * so far just assumes that multiplicativity at p is enough
-def multiplicative_basis(T, bad=1, p=2):
+def multiplicative_basis(T, good, bad=1, p=2):
     dim = T[1].real().round()
-    good = first_d_relatively_prime_to_n(dim, bad*p)
+    #good = first_d_relatively_prime_to_n(dim, bad*p)
     N = len(T)
     c = matrix(CDF, [ [T[m*n] for n in good] for m in good] ).inverse()
     v = c * matrix(CDF, [ [T[m*n*p] for n in good] for m in good] )
     D, P = v.right_eigenmatrix()
     print D
+    print v.right_eigenmatrix()
+    print v.left_eigenmatrix()
     basis = P.transpose() * matrix( [ [T[m*n] for n in range(1,N/good[-1])] for m in good] )
     return [basis.row(i) / basis[i,0] for i in range(dim)]

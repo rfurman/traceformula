@@ -5,12 +5,15 @@
 #include <iostream>
 #include <cassert>
 #include <vector>
+#include <unsupported/Eigen/MPRealSupport>
 
 //#include <boost/multiprecision/gmp.hpp> 
 //#include <boost/multiprecision/cpp_int.hpp> 
 //#include <flint/fmprb_mat.h>
 using namespace std;
+//using namespace mpfr;
 using Eigen::Matrix;
+using Eigen::ComplexEigenSolver;
 using Eigen::Dynamic;
 //using namespace boost::multiprecision;
 typedef long long i64;
@@ -185,15 +188,17 @@ Matrix<complex<double>,Dynamic,Dynamic> matrix_of_character_exponents(int N, int
             }
             cur %= phiN;
         } while(e2.next());
-        if(ret[chi][N-1]==(k%2?phiN/2:0)) nchi++;
+        if(true || ret[chi][N-1]==(k%2?phiN/2:0)) nchi++;
         chi++;
     } while(e1.next());
 
-    Matrix<complex<double>,Dynamic,Dynamic> ret2(nchi, N);
-    for(int i=0, ii=0; i<phiN; i++) if(ret[i][N-1]==(k%2?phiN/2:0)) {
+    Matrix<complex<double>,Dynamic,Dynamic> ret2 = Matrix<complex<double>,Dynamic,Dynamic>::Zero(nchi, N);
+    for(int i=0, ii=0; i<phiN; i++) if(true || ret[i][N-1]==(k%2?phiN/2:0)) {
         for(int j=0, jj=0; j<N; j++)
-            if(true || __gcd(N,j)==1)
+            if(__gcd(N,j)==1)
                 ret2.coeffRef(ii,jj++)=polar(1.0, -2*M_PI*(1.*ret[i][j]/phiN));
+            else
+                ret2.coeffRef(ii,jj++)=0;
         ii++;
     }
     return ret2;
@@ -325,8 +330,19 @@ void allTrThat12new(int M, int N, int k) {
 int main(void) {
         pari_init(8000000, 600000);
 
+        cout << "Testing eigenvalues" << endl;
+        int MM, prec;
+        cin >> MM >> prec;
+        mpfr::mpreal::set_default_prec(prec);
+
+        Matrix<complex<mpfr::mpreal>,Dynamic,Dynamic> mat(MM,MM);
+        for(int i=0; i<MM; i++) for(int j=0; j<MM; j++)
+            mat(i,j) = rand()/65536./65536.;
+        ComplexEigenSolver<Matrix<complex<mpfr::mpreal>,Dynamic,Dynamic> > ces(mat);
+        cout << ces.eigenvalues() << endl;
+        return 0;
+
         cout << "Initalizing primes" << endl;
-        cout << itos(prime(1)) << " " << itos(prime(2)) << endl;
         for(int i=1; i<41541; i++) primes_list.push_back(itos(prime(i)));
         cout << "Done" << endl;
 
@@ -351,29 +367,53 @@ int main(void) {
             for(int i=p*p*p; i<500000; i+=p*p*p) mobius2[i]*=0;
         }
         cout << "Done" << endl;
-        for(int i=1; i<100; i++) cout << mobius[i] << " "; cout << endl;
-        for(int i=1; i<100; i++) cout << mobius2[i] << " "; cout << endl;
 
 	//gen_and_pow_of_znstar(15);
 
         //int M=500000, N=997, k=4;
         //int M=2, N=997, k=4;
-        int M=30, N=15, k=4;
+        int M=1000, N=15, k=4;
+
+        cin >> M >> N >> k;
 
         if(theoretical_TrT_bound(M,N,k)<1e18) {
             Matrix<double,Dynamic,Dynamic> vals = allTrThat12<long long>(M,N,k);
             Matrix<complex<double>,Dynamic,Dynamic> fourier = matrix_of_character_exponents(N,k);
-            cout << "New and old" << endl << vals << endl << "And fouriered" << fourier * vals << endl;
-            for(int d=1; d<N; d++) {
-                Matrix<double,Dynamic,Dynamic> vals2 = allTrThat12<long long>(M,d,k);
-                for(int y=0; y<N; y++) for(int n=0; n<M; n++) {
+            //cout << "New and old" << endl << vals << endl << "And fouriered" << endl << fourier * vals << endl;
+            for(int d=2; d<=N; d++) if(N%d==0) {
+                Matrix<double,Dynamic,Dynamic> vals2 = allTrThat12<long long>(M,N/d,k);
+                //cout << "Adjusting with" << endl << vals2 << endl << "and fouriered vals2" << endl;// << fourier * vals2 << endl;
+                for(int y=0; y<N; y++) if(true||__gcd(N,y)==1) for(int n=0; n<M; n++) {
                     int prime_to_n_part = d;
                     while(__gcd(prime_to_n_part,n)>1) prime_to_n_part /= __gcd(prime_to_n_part,n);
-                    vals(y,n) += mobius2[prime_to_n_part] * mobius[d/prime_to_n_part] * vals2(y%d,n);
+                    vals(y,n) += mobius2[prime_to_n_part] * mobius[d/prime_to_n_part] * vals2(y%(N/d),n) * phi(N/d) / phi(N);
                 }
             }
-            cout << "Just new?" << endl << vals << endl << "And fouriered" << fourier * vals << endl;
+            Matrix<complex<double>,Dynamic,Dynamic> vals2 = fourier * vals;
+            int dim = (int)round(vals2(0,1).real());
+            assert(abs(vals2(0,1)-(double)dim)<0.0001);
+            cout << "Computing dimension " << dim << " eigenbasis" << endl;
+            //cout << vals2 << endl;
+
+            vector<int> rel_primes;
+            for(int i=1; rel_primes.size()<dim; i++) if(__gcd(i,2*N)==1) rel_primes.push_back(i);
+
+            Matrix<complex<double>,Dynamic,Dynamic> c(dim,dim), Tp(dim,dim), bb(dim, M/rel_primes.back());
+            for(int i=0; i<dim; i++) for(int j=0; j<dim; j++) c(i,j)=vals2(0,rel_primes[i]*rel_primes[j]);
+            for(int i=0; i<dim; i++) for(int j=0; j<dim; j++) Tp(i,j)=vals2(0,rel_primes[i]*rel_primes[j]*2);
+            for(int i=0; i<dim; i++) for(int j=0; j<M/rel_primes.back(); j++) bb(i,j)=vals2(0,rel_primes[i]*j);
+            Matrix<complex<double>,Dynamic,Dynamic> v = c.inverse() * Tp;
+            //cout << c << endl;
+            //cout << Tp << endl;
+            //cout << v << endl;
+            ComplexEigenSolver<Matrix<complex<double>,Dynamic,Dynamic> > ces((c.inverse() * Tp));
+            //cout << ces.eigenvalues() << endl;
+            //cout << ces.eigenvectors() << endl;
+            //cout << ces.eigenvectors() * bb << endl;
+            //cout << "Just new?" << endl << vals << endl << "And fouriered" << endl << fourier * vals << endl;
             //matrix<double,Dynamic,Dynamic> vals = matrix_of_character_exponents(N,k) * allTrThat12<long long>(M,N,k);
+            cout << "Done" << endl;
+            cout << M/rel_primes.back() << " coefficients" << endl;
 
         } else {
             cout << "Calculations would overflow long long, switching to gmp" << endl;
