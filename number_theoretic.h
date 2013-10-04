@@ -4,9 +4,9 @@ vector<int> primes_list;
 int mobius[500000];
 int mobius2[500000];
 
-long long pow(long long x, int y) {
+long pow(long x, int y) {
     if(y==0) return 1;
-    long long ret = pow(x,y/2);
+    long ret = pow(x,y/2);
     ret *= ret;
     return (y%2?ret*x:ret);
 }
@@ -14,7 +14,7 @@ long long pow(long long x, int y) {
 
 int pow(int x, int y) {
     if(y==0) return 1;
-    long long ret = pow(x,y/2);
+    long ret = pow(x,y/2);
     ret *= ret;
     return (y%2?ret*x:ret);
 }

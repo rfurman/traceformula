@@ -1,6 +1,6 @@
 // Evaluate the polynomials from the trace formula
 // If t^2,n <= M then bounded by Fibonacci_k * M^(k/2)a < (3M)^(k/2)
-template<class i64> i64 evalpoly(int k, long long t, long long n) {
+template<class i64> i64 evalpoly(int k, long t, long n) {
     switch(k) {
     case 0: return (i64)1;
     case 1: return (i64)t;
@@ -171,7 +171,7 @@ RRMatrix allTrThat12new(int M, int N, int k) {
     RRMatrix vals = RRMatrix::Zero(N,M);
     for(int d=1; d<=N; d++) if(N%d==0) {
         cout << "\rComputing forms of level " << N/d << "             " << endl;
-        ZZMatrix vals2 = allTrThat12<long long>(M,N/d,k);
+        ZZMatrix vals2 = allTrThat12<long>(M,N/d,k);
         for(int y=0; y<N; y++) if(true||__gcd(N,y)==1) for(int n=0; n<M; n++) {
             int prime_to_n_part = d;
             while(__gcd(prime_to_n_part,n)>1) prime_to_n_part /= __gcd(prime_to_n_part,n);

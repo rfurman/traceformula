@@ -161,11 +161,12 @@ def A3hat(n, N, k, a):
         # c divides N, divides d-a, and is a multiple of N/gcd(N,n/d-a)
         c1 = ZZ(N/(gcd(N,n/d-a)))
         c2 = gcd(N,d-a)
-        if c1.divides(c2):
-            S2 = sigma(c2/c1,0)
-        #for c in divisors(gcd(N,d-a)):
-            #if (n/d-a)%(N/c)==0:
-                #S2 += euler_phi(gcd(c,N/c))
+        #if c1.divides(c2):
+        #    S2 = sigma(c2/c1,0)
+        for c in divisors(gcd(N,d-a)):
+            if (n/d-a)%(N/c)==0:
+                g = gcd(c,N/c)
+                S2 += euler_phi(g)/g
         S1 += S2 * min(d,ZZ(n/d))^(k-1)
     return -S1/2
 
@@ -211,7 +212,7 @@ def allTrT(M, N, k):
     astar = [i for i in range(N) if gcd(i,N)==1]
     #chars = [g for g in DirichletGroup(N) if g(-1)==(-1)^k]
     chars = [g for g in DirichletGroup(N)]
-    fourier = matrix( [ [ char(a).conjugate() for a in astar ] for char in chars ] )
+    fourier = matrix( [ [ char(a) for a in astar ] for char in chars ] )
     return fourier * allTrThat(M, N, k)
 
 # coefficients of 1/zeta(s)^2

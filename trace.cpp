@@ -19,7 +19,7 @@ using Eigen::ComplexEigenSolver;
 using Eigen::Dynamic;
 using Eigen::ColMajor;
 //using namespace boost::multiprecision;
-typedef long long i64;
+typedef long i64;
 //typedef mpz_int i64;
 
 //typedef double Real;
@@ -29,12 +29,12 @@ typedef complex<RR> CC;
 
 typedef Matrix<CC,Dynamic,Dynamic> CCMatrix;
 typedef Matrix<RR,Dynamic,Dynamic> RRMatrix;
-typedef Matrix<long long,Dynamic,Dynamic,ColMajor> ZZMatrix;
+typedef Matrix<long,Dynamic,Dynamic,ColMajor> ZZMatrix;
 
 #include "number_theoretic.h"
 
 
-double to_double(long long x) { return x; }
+double to_double(long x) { return x; }
 //double to_double(const mpz_int& x) { return x.convert_to<double>(); }
 
 #include "characters.h"
@@ -216,7 +216,7 @@ int main(void) {
             }
 
         } else {
-            cout << "Calculations would overflow long long, switching to gmp" << endl;
+            cout << "Calculations would overflow long, switching to gmp" << endl;
             //allTrThat12<mpz_int>(M,N,k);
             assert(false);
         }
