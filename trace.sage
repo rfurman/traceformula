@@ -236,9 +236,12 @@ def TrTnew(n, N, k, chi=None):
     if n==0:
         return 0
     sum = 0
-    for d in divisors(N/Nx):
+    for d in divisors(ZZ(N/Nx)):
       if TrT(1, ZZ(N/d), k, chi) != 0:
-        sum += moebius2(prime_to_m_part(d,n)) * moebius(d/prime_to_m_part(d,n)) * TrT(n, ZZ(N/d), k, chi.primitive_character().extend(N/d))
+        chi2 = chi.primitive_character().extend(N/d)
+        sum += moebius2(prime_to_m_part(d,n)) * moebius(d/prime_to_m_part(d,n)) * TrT(n, ZZ(N/d), k, chi2)
+        if (d*d).divides(n) and d>1:
+            sum -= moebius2(prime_to_m_part(d,n)) * moebius(d/prime_to_m_part(d,n)) * TrT(n/d/d, ZZ(N/d), k, chi2) * d^3 * chi2(d)
     return sum
 
 # Warning! wrong answer when gcd(n,N^infty) is not square-free
@@ -272,19 +275,35 @@ def first_d_relatively_prime_to_n(d, n):
     gen = (i for i in xrange(10000000) if gcd(i,n)==1)
     return [gen.next() for i in range(d)]
 
+def prod2(T, m, n):
+    ret = 0
+    for d in divisors(gcd(m,n)):
+        ret += T[m*n/d/d]*d^3
+    return ret
+
 # Given v a sum of d multiplicative sequences return the d sequences
 # * v should start with a 0
 # * v should be of length at least 4*p*d^2
 # * so far just assumes that multiplicativity at p is enough
-def multiplicative_basis(T, good, bad=1, p=2):
+def multiplicative_basis(T, bad=1, p=2):
     dim = T[1].real().round()
-    #good = first_d_relatively_prime_to_n(dim, bad*p)
     N = len(T)
-    c = matrix(CDF, [ [T[m*n] for n in good] for m in good] ).inverse()
-    v = c * matrix(CDF, [ [T[m*n*p] for n in good] for m in good] )
+    good = first_d_relatively_prime_to_n(dim, bad*p)
+    c = matrix(CDF, [ [prod2(T,m,n) for n in good] for m in good] ).inverse()
+    v = c * matrix(CDF, [ [prod2(T,m,n*p) for n in good] for m in good] )
+    print c.inverse()
+    print c
+    print c.inverse()*v
+    print v
+    D, P = v.left_eigenmatrix()
+    print D
+    print P
     D, P = v.right_eigenmatrix()
     print D
-    print v.right_eigenmatrix()
-    print v.left_eigenmatrix()
-    basis = P.transpose() * matrix( [ [T[m*n] for n in range(1,N/good[-1])] for m in good] )
+    print P
+    print P.transpose()
+    #for n in range(1,N):
+    #    T[n] *= n^1.5
+    basis = P.transpose()*matrix( [ [prod2(T,m,n) for n in range(1,N/good[-1])] for m in good] )
+    print P.transpose().inverse()*basis
     return [basis.row(i) / basis[i,0] for i in range(dim)]
