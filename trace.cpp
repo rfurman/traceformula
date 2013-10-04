@@ -139,7 +139,7 @@ int main(void) {
                     cout << "\rComputing dimension " << dim << " eigenbasis with character #" << chi+1 << endl;
                 }
 
-                cout << "\rLoading small data                                " << flush;
+                cout << "\rPicking c matrix                                " << flush;
                 vector<int> rel_primes;
                 CCMatrix c(0,0);
                 for(int i=1; rel_primes.size()<dim; i++) {
@@ -149,14 +149,23 @@ int main(void) {
                     for(int i=0; i<rel_primes.size(); i++) c(i,j)=c(j,i)=prod2(vals2.row(chi),fourier.row(chi),rel_primes[i],rel_primes[j],k);
                     if(abs(c.determinant())<0.000001) rel_primes.pop_back();
                 }
+                if(rel_primes.back()>dim) {
+                    cout << "\rHad to skip " << rel_primes.back()-dim << " elements to get a rank " << dim << " c-matrix" << endl;
+                }
 
-                CCMatrix Tp(dim,dim), bb(dim, M/rel_primes.back());
-                for(int i=0; i<dim; i++) for(int j=0; j<dim; j++) Tp(i,j)=prod3(vals2.row(chi),fourier.row(chi),rel_primes[i],rel_primes[j],2,k);
+                cout << "\rComputing matrix to diagonalize                     " << flush;
+                CCMatrix Tp=CCMatrix::Zero(dim,dim), bb(dim, M/rel_primes.back());
+                int l;
+                for(l=0; l<primes_list.size(); l++) {
+                    int p = primes_list[l];
+                    if(dim*dim*p>vals2.cols()) break;
+                    for(int i=0; i<dim; i++) for(int j=0; j<dim; j++) Tp(i,j)+=prod3(vals2.row(chi),fourier.row(chi),rel_primes[i],rel_primes[j],p,k)*RR(log(p+0.));
+                }
+                if(l>1) cout << "\rUsing " << l << " hecke matrices to be conservative         " << endl;
                 cout << "\rLoading big data                  " << flush;
                 for(int i=0; i<dim; i++) for(int j=0; j<M/rel_primes.back(); j++) bb(i,j)=prod2(vals2.row(chi),fourier.row(chi),rel_primes[i],j,k);
                 cout << "\rBasic lin alg                  " << flush;
                 CCMatrix v = (c.inverse() * Tp);
-                cout << "\r" << c.determinant() << endl;
                 cout << "\rSolve for eigenvectors           " << flush;
                 ComplexEigenSolver<CCMatrix > ces((c.inverse() * Tp));
                 cout << "\rCompute result                        " << flush;
