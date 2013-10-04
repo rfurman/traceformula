@@ -272,14 +272,23 @@ def test_TrT(N, k, chi=None):
         print "pass"
 
 def first_d_relatively_prime_to_n(d, n):
-    gen = (i for i in xrange(10000000) if gcd(i,n)==1)
+    gen = (i for i in xrange(1,10000000) if gcd(i,n)==1)
     return [gen.next() for i in range(d)]
+
 
 def prod2(T, m, n):
     ret = 0
     for d in divisors(gcd(m,n)):
         ret += T[m*n/d/d]*d^3
     return ret
+
+def prod3(T, m, n, p):
+    ret = 0
+    for d in divisors(gcd(m,n)):
+        ret += prod2(T,m*n/d/d,p)*d^3
+    return ret
+
+
 
 # Given v a sum of d multiplicative sequences return the d sequences
 # * v should start with a 0
@@ -288,9 +297,9 @@ def prod2(T, m, n):
 def multiplicative_basis(T, bad=1, p=2):
     dim = T[1].real().round()
     N = len(T)
-    good = first_d_relatively_prime_to_n(dim, bad*p)
+    good = first_d_relatively_prime_to_n(dim, bad)
     c = matrix(CDF, [ [prod2(T,m,n) for n in good] for m in good] ).inverse()
-    v = c * matrix(CDF, [ [prod2(T,m,n*p) for n in good] for m in good] )
+    v = c * matrix(CDF, [ [prod3(T,m,n,p) for n in good] for m in good] )
     print c.inverse()
     print c
     print c.inverse()*v

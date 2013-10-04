@@ -66,6 +66,19 @@ template<class T, class U> CC prod2(const T& a, const U& chi, int m, int n, int 
     return ret;
 } 
 
+template<class T, class U> CC prod3(const T& a, const U& chi, int m, int n, int p, int k) {
+    int g = __gcd(m,n);
+    CC ret;
+    for(int d=1; d<=g; d++) if(g%d==0) {
+        int dk=1; // d^(k-1)
+        for(int i=0; i<k-1; i++) dk*=d;
+        ret += prod2(a,chi,m*n/d/d,p,k)*RR(dk)*chi(d%chi.cols());
+    }
+    return ret;
+} 
+
+
+
 template<class T> bool close_enough(const T& A, const T& B) {
     return abs(A-B) < 0.00001 * (abs(A)+abs(B)+1);
 }
@@ -126,17 +139,24 @@ int main(void) {
                     cout << "\rComputing dimension " << dim << " eigenbasis with character #" << chi+1 << endl;
                 }
 
-                vector<int> rel_primes;
-                for(int i=1; rel_primes.size()<dim; i++) if(__gcd(i,2)==1) rel_primes.push_back(i);
-
-                CCMatrix c(dim,dim), Tp(dim,dim), bb(dim, M/rel_primes.back());
                 cout << "\rLoading small data                                " << flush;
-                for(int i=0; i<dim; i++) for(int j=0; j<dim; j++) c(i,j)=prod2(vals2.row(chi),fourier.row(chi),rel_primes[i],rel_primes[j],k);
-                for(int i=0; i<dim; i++) for(int j=0; j<dim; j++) Tp(i,j)=prod2(vals2.row(chi),fourier.row(chi),rel_primes[i],rel_primes[j]*2,k);
+                vector<int> rel_primes;
+                CCMatrix c(0,0);
+                for(int i=1; rel_primes.size()<dim; i++) {
+                    rel_primes.push_back(i);
+                    c.conservativeResize(rel_primes.size(), rel_primes.size());
+                    int j=rel_primes.size()-1;
+                    for(int i=0; i<rel_primes.size(); i++) c(i,j)=c(j,i)=prod2(vals2.row(chi),fourier.row(chi),rel_primes[i],rel_primes[j],k);
+                    if(abs(c.determinant())<0.000001) rel_primes.pop_back();
+                }
+
+                CCMatrix Tp(dim,dim), bb(dim, M/rel_primes.back());
+                for(int i=0; i<dim; i++) for(int j=0; j<dim; j++) Tp(i,j)=prod3(vals2.row(chi),fourier.row(chi),rel_primes[i],rel_primes[j],2,k);
                 cout << "\rLoading big data                  " << flush;
                 for(int i=0; i<dim; i++) for(int j=0; j<M/rel_primes.back(); j++) bb(i,j)=prod2(vals2.row(chi),fourier.row(chi),rel_primes[i],j,k);
                 cout << "\rBasic lin alg                  " << flush;
                 CCMatrix v = (c.inverse() * Tp);
+                cout << "\r" << c.determinant() << endl;
                 cout << "\rSolve for eigenvectors           " << flush;
                 ComplexEigenSolver<CCMatrix > ces((c.inverse() * Tp));
                 cout << "\rCompute result                        " << flush;
@@ -144,8 +164,8 @@ int main(void) {
                 //cout << results << endl;
                 //cout << ces.eigenvalues() << endl;
 
-                cout << "\rVerifying multiplicativity             " << endl;
                 for(int i=0; i<results.rows(); i++) {
+                    cout << "\rVerifying multiplicativity             " << flush;
                     bool good = true;
                     for(int j=0; j<results.rows(); j++) if(i!=j)
                         if(close_enough(ces.eigenvalues()(i),ces.eigenvalues()(j)))
@@ -174,13 +194,13 @@ int main(void) {
                     } else {
                         cout << "\rPassed multiplicativity check         " << flush;
                         number_good++;
+                        char filename[100];
+                        sprintf(filename, "newforms/level%d_character%d_weight%d_number%d", N, chi, k, i);
+                        ofstream out(filename);
+                        for(int j=1; j<results.cols(); j++)
+                            out << setprecision(prec*0.28) << results(i,j).real() << " + " << results(i,j).imag() << " i" << endl;
+                        out.close();
                     }
-                    char filename[100];
-                    sprintf(filename, "newforms/level%d_character%d_weight%d_number%d", N, chi, k, i);
-                    ofstream out(filename);
-                    for(int j=1; j<results.cols(); j++)
-                        out << setprecision(prec*0.28) << results(i,j).real() << " + " << results(i,j).imag() << " i" << endl;
-                    out.close();
                 }
 
                 cout << "\r" << M/rel_primes.back() << " coefficients for " << number_good << " newforms (" << number_bad << " failed to be computed)" << endl;
