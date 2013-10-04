@@ -197,9 +197,9 @@ public:
                 even_part = zeta_powers_even[chi_even_exponent(m % q_even, n % q_even)];
             }
         }
-        if(m > q_odd)
+        if(m >= q_odd)
             m %= q_odd;
-        if(n > q_odd);
+        if(n >= q_odd);
             n %= q_odd;
         if(q_odd > 1) {
             if(A[m][0] == -1 || A[n][0] == -1)

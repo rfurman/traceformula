@@ -127,7 +127,10 @@ template<class i64> ZZMatrix allTrThat12(const int M, const int N, int k) {
                 int c1=N/__gcd(N,abs(n/d-a));
                 int c2 = __gcd(N,abs(d-a));
                 if(c2%c1==0) {
-                    vals.coeffRef(a,n) -= phiN*(d*d==n?6:12)*number_of_divisors(c2/c1)*p;
+                    for(int c=c1; c<=c2; c+=c1) if(c2%c==0) {
+                        int g=__gcd(c,N/c);
+                        vals.coeffRef(a,n) -= (d*d==n?6:12)*p*phi(g)*phi(N/g);
+                    }
                 }
             }
         }
@@ -179,7 +182,7 @@ RRMatrix allTrThat12new(int M, int N, int k) {
             if(d>1 && n%(d*d)==0 && N%(d*d)!=0) {
                 int dinv=0;
                 for(int i=0; i<N/d; i++) if((d*i)%(N/d)==1) dinv=i;
-                if(N/d>1) assert(dinv);
+                //if(N/d>1) assert(dinv);
                 int dk=1; // d^(k-1)
                 for(int i=0; i<k-1; i++) dk*=d;
                 vals(y,n) -= mobius2[prime_to_n_part] * mobius[d/prime_to_n_part] * vals2((y*dinv)%(N/d),n/d/d) * dk;
