@@ -1,3 +1,4 @@
+#define NDEBUG
 #include <Eigen/Dense>
 #include <complex>
 #include <fstream>
@@ -130,7 +131,7 @@ int main(void) {
 
             for(int chi=0; chi<fourier.rows(); chi++) {
                 int dim = round(vals2(chi,1).real()).toLong();
-                assert(abs(vals2(chi,1)-(RR)dim)<0.0001);
+                if(abs(vals2(chi,1)-(RR)dim)>0.0001) abort();
                 int number_good=0, number_bad=0;
                 if(dim==0) {
                     cout << "\rComputing dimension " << dim << " eigenbasis with character #" << chi+1 << endl;
@@ -142,7 +143,7 @@ int main(void) {
                 cout << "\rPicking c matrix                                " << flush;
                 vector<int> rel_primes;
                 CCMatrix c(0,0);
-                for(int i=1; rel_primes.size()<dim; i++) {
+                for(int i=1; rel_primes.size()<dim; i++) if(__gcd(i,N)==1) {
                     rel_primes.push_back(i);
                     c.conservativeResize(rel_primes.size(), rel_primes.size());
                     int j=rel_primes.size()-1;
@@ -153,23 +154,67 @@ int main(void) {
                     cout << "\rHad to skip " << rel_primes.back()-dim << " elements to get a rank " << dim << " c-matrix" << endl;
                 }
 
-                cout << "\rComputing matrix to diagonalize                     " << flush;
-                CCMatrix Tp=CCMatrix::Zero(dim,dim), bb(dim, M/rel_primes.back());
+                // Number of sqrt(chi) to generate
+                int Nchi = max(rel_primes.back(), (int)vals2.cols()/rel_primes.back()/rel_primes.back())+1;
+                cout << "\rComputing " << Nchi << " values of sqrt(chi)              " << flush;
+                vector<CC> sqrtchi(Nchi,CC(1,0));
+                for(int i=0; i<primes_list.size(); i++) {
+                    int p = primes_list[i];
+                    if(__gcd(p,N)>1) continue;
+                    if(p>=Nchi) break;
+                    CC sqrtp = sqrt(conj(fourier(chi,p%fourier.cols())));
+                    for(int j=p; j<Nchi; j+=p)
+                        sqrtchi[j]=sqrtchi[j/p]*sqrtp;
+                }
+
+                cout << "\rComputing matrix to diagonalize                              " << flush;
+                RRMatrix Tp=RRMatrix::Zero(dim,dim);
                 int l;
                 for(l=0; l<primes_list.size(); l++) {
                     int p = primes_list[l];
-                    if(dim*dim*p>vals2.cols()) break;
-                    for(int i=0; i<dim; i++) for(int j=0; j<dim; j++) Tp(i,j)+=prod3(vals2.row(chi),fourier.row(chi),rel_primes[i],rel_primes[j],p,k)*RR(log(p+0.));
+                    if(__gcd(p,N)>1) continue;
+                    if(rel_primes.back()*rel_primes.back()*p>vals2.cols()) break;
+                    for(int i=0; i<dim; i++) for(int j=0; j<dim; j++) {
+                        CC x = prod3(vals2.row(chi),fourier.row(chi),rel_primes[i],rel_primes[j],p,k)*RR(log(p+0.))*sqrtchi[rel_primes[i]]*sqrtchi[rel_primes[j]]*sqrtchi[p];
+                        assert(x.imag()<0.00001);
+                        Tp(i,j)+=x.real();
+                    }
+                    //break;
                 }
+
+                cout << "\rConverting c to real matrix                  " << flush;
+                RRMatrix cR=RRMatrix(dim,dim);
+                for(int i=0; i<dim; i++) for(int j=0; j<dim; j++) {
+                    CC x = c(i,j)*sqrtchi[rel_primes[i]]*sqrtchi[rel_primes[j]];
+                    assert(x.imag()<0.00001);
+                    cR(i,j) = x.real();
+                }
+
                 if(l>1) cout << "\rUsing " << l << " hecke matrices to be conservative         " << endl;
                 cout << "\rLoading big data                  " << flush;
+                CCMatrix bb(dim, M/rel_primes.back());
                 for(int i=0; i<dim; i++) for(int j=0; j<M/rel_primes.back(); j++) bb(i,j)=prod2(vals2.row(chi),fourier.row(chi),rel_primes[i],j,k);
                 cout << "\rBasic lin alg                  " << flush;
-                CCMatrix v = (c.inverse() * Tp);
+                //CCMatrix v = (c.inverse() * Tp);
+
+                /*bool realizable = true;
+                for(int i=0; i<v.rows(); i++)
+                    for(int j=0; j<v.cols(); j++)
+                        if(abs((v(0,0)*v(i,j)*conj(v(0,j))*conj(v(i,0))).imag()) > RR(0.00001))
+                            realizable = false;
+                if(!realizable) {
+                    cout << "Matrix cannot be made real" << endl;
+                    cout << v << endl;
+                }*/
                 cout << "\rSolve for eigenvectors           " << flush;
-                ComplexEigenSolver<CCMatrix > ces((c.inverse() * Tp));
+                Eigen::GeneralizedSelfAdjointEigenSolver<RRMatrix > ces(Tp, cR);
                 cout << "\rCompute result                        " << flush;
-                CCMatrix results = adjust(ces.eigenvectors().transpose() * bb);
+                RRMatrix vR = ces.eigenvectors().transpose();
+                CCMatrix vC = CCMatrix(dim,dim);
+                for(int i=0; i<dim; i++)
+                    for(int j=0; j<dim; j++)
+                        vC(i,j) = vR(i,j) * sqrtchi[rel_primes[j]];
+                CCMatrix results = adjust(vC * bb);
                 //cout << results << endl;
                 //cout << ces.eigenvalues() << endl;
 
@@ -184,14 +229,15 @@ int main(void) {
                         number_bad++;
                         continue;
                     }
-                    for(int j=1; j<results.cols(); j++)
-                      for(int l=1; j*l<results.cols(); l++) {
+                    for(int j=1; j<results.cols(); j++) {
+                      //for(int l=1; j*l<results.cols(); l++) {
+                        int l = abs(rand())%((results.cols()-1)/j)+1;
                         CC A = results(i,j)*results(i,l);
                         CC B = prod2(results.row(i),fourier.row(chi),j,l,k);
-                        if(!close_enough(A,B)) {
-                            if(good) {
-                                //cout << chi << " " << i << " " << j << " " << k << " " << A << " " << B << " " << results(i,j) << " " << results(i,k) << " " << results(i,j*k) << endl;
-                                //cout << fourier.row(chi) << endl;
+                        if(!close_enough(A,B) && __gcd(j,N)==1 && __gcd(l,N)==1 ) {
+                            if(true || good) {
+                                cout << chi << " " << i << " " << j << " " << l << " " << A << " " << B << " " << results(i,j) << " " << results(i,l) << " " << results(i,j*l) << endl;
+                                cout << fourier.row(chi) << endl;
                                 //assert(false);
                             }
                             good=false;
@@ -219,5 +265,6 @@ int main(void) {
             cout << "Calculations would overflow long, switching to gmp" << endl;
             //allTrThat12<mpz_int>(M,N,k);
             assert(false);
+            abort();
         }
 }

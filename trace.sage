@@ -242,7 +242,7 @@ def TrTnew(n, N, k, chi=None):
         chi2 = chi.primitive_character().extend(N/d)
         sum += moebius2(prime_to_m_part(d,n)) * moebius(d/prime_to_m_part(d,n)) * TrT(n, ZZ(N/d), k, chi2)
         if (d*d).divides(n) and d>1:
-            sum -= moebius2(prime_to_m_part(d,n)) * moebius(d/prime_to_m_part(d,n)) * TrT(n/d/d, ZZ(N/d), k, chi2) * d^3 * chi2(d)
+            sum -= moebius2(prime_to_m_part(d,n)) * moebius(d/prime_to_m_part(d,n)) * TrT(n/d/d, ZZ(N/d), k, chi2) * d^(k-1) * chi2(d)
     return sum
 
 # Warning! wrong answer when gcd(n,N^infty) is not square-free
@@ -301,17 +301,17 @@ def multiplicative_basis(T, bad=1, p=2):
     good = first_d_relatively_prime_to_n(dim, bad)
     c = matrix(CDF, [ [prod2(T,m,n) for n in good] for m in good] ).inverse()
     v = c * matrix(CDF, [ [prod3(T,m,n,p) for n in good] for m in good] )
-    print c.inverse()
-    print c
-    print c.inverse()*v
+    #print c.inverse()
+    #print c
+    #print c.inverse()*v
     print v
     D, P = v.left_eigenmatrix()
-    print D
-    print P
+    #print D
+    #print P
     D, P = v.right_eigenmatrix()
-    print D
-    print P
-    print P.transpose()
+    #print D
+    #print P
+    #print P.transpose()
     #for n in range(1,N):
     #    T[n] *= n^1.5
     basis = P.transpose()*matrix( [ [prod2(T,m,n) for n in range(1,N/good[-1])] for m in good] )
