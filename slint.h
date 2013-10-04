@@ -11,11 +11,11 @@
 
 // taken from NTL, stripped of
 // overflow checking
-void XGCD(long& d, long& s, long& t, long a, long b)
+void XGCD(int& d, int& s, int& t, int a, int b)
 {
-   long  u, v, u0, v0, u1, v1, u2, v2, q, r;
+   int  u, v, u0, v0, u1, v1, u2, v2, q, r;
 
-   long aneg = 0, bneg = 0;
+   int aneg = 0, bneg = 0;
 
    if (a < 0) {
       a = -a;
@@ -56,9 +56,9 @@ void XGCD(long& d, long& s, long& t, long a, long b)
 }
    
 // taken from NTL:
-long InvMod(long a, long n)
+int InvMod(int a, int n)
 {
-   long d, s, t;
+   int d, s, t;
 
    XGCD(d, s, t, a, n);
    if (d != 1) return -1;
@@ -69,12 +69,12 @@ long InvMod(long a, long n)
 }
 
 // taken from NTL:
-static inline long MulMod(long a, long b, long n)
+static inline int MulMod(int a, int b, int n)
 {
 
-    long q, res;
+    int q, res;
 
-    q  = (long) ((((double) a) * ((double) b)) / ((double) n)); 
+    q  = (int) ((((double) a) * ((double) b)) / ((double) n)); 
     res = a*b - q*n;
     if (res >= n)
         res -= n;
@@ -84,14 +84,14 @@ static inline long MulMod(long a, long b, long n)
 }
 
 // taken from NTL
-long PowerMod(long a, long ee, long n)
+int PowerMod(int a, int ee, int n)
 {
-    long x, y;
+    int x, y;
 
-    unsigned long e;
+    unsigned int e;
 
     if (ee < 0)
-        e = - ((unsigned long) ee);
+        e = - ((unsigned int) ee);
     else
         e = ee;
 
@@ -110,9 +110,9 @@ long PowerMod(long a, long ee, long n)
 
 // taken from NTL,
 // stripped of overflow checking
-long GCD(long a, long b)
+int GCD(int a, int b)
 {
-   long u, v, t, x;
+   int u, v, t, x;
 
    if (a < 0) {
       a = -a;
@@ -140,14 +140,14 @@ long GCD(long a, long b)
    return x;
 }
 
-long euler_phi(long n) {
+int euler_phi(int n) {
     // yes, this is stupidly slow...
     //
     // I don't care.
     //
-    long phi = 1;
-    long p = 2;
-    long p_power = 1;
+    int phi = 1;
+    int p = 2;
+    int p_power = 1;
     while(n > 1) {
         p_power = 1;
         while( (n % p) == 0 ) {
@@ -163,7 +163,7 @@ long euler_phi(long n) {
     return phi;
 }
 
-void factors(long n, std::vector<long> * primes, std::vector<int> * exponents) {
+void factors(int n, std::vector<int> * primes, std::vector<int> * exponents) {
     //
     // appends the prime factors of n to *primes,
     // and if exponents if not NULL, appends the exponents
@@ -173,7 +173,7 @@ void factors(long n, std::vector<long> * primes, std::vector<int> * exponents) {
     //
     // i don't care...
     //
-    long p = 2;
+    int p = 2;
     int a = 0;
     while(n > 1) {
         a = 0;
@@ -195,7 +195,7 @@ void factors(long n, std::vector<long> * primes, std::vector<int> * exponents) {
 }
 
 
-long primitive_root(long n) {
+int primitive_root(int n) {
     //
     // return the smallest primitive root mod n
     // we make no check that there is actually a primitive root,
@@ -207,16 +207,16 @@ long primitive_root(long n) {
     }
     if(n == 2)
         return 1;
-    long phi = euler_phi(n);
-    std::vector<long> phi_prime_factors;
+    int phi = euler_phi(n);
+    std::vector<int> phi_prime_factors;
     factors(phi, &phi_prime_factors, NULL);
-    long a = 1;
+    int a = 1;
     while(a < n) {
         a++;
         if(GCD(a,n) > 1)
             continue;
         bool root = true;
-        for(    std::vector<long>::iterator i = phi_prime_factors.begin();
+        for(    std::vector<int>::iterator i = phi_prime_factors.begin();
                 i != phi_prime_factors.end();
                 i++     ) {
             //std::cout << p << " " << *i << std::endl;
@@ -232,8 +232,8 @@ long primitive_root(long n) {
     return -1;
 }
 
-bool is_prime_power(long q) {
-    std::vector<long> primes;
+bool is_prime_power(int q) {
+    std::vector<int> primes;
     factors(q, &primes, NULL);
     if(primes.size() == 1)
         return true;
@@ -241,14 +241,14 @@ bool is_prime_power(long q) {
         return false;
 }
 
-bool MR_test(long n, long a) {
-    long d = n - 1;
+bool MR_test(int n, int a) {
+    int d = n - 1;
     int s = 0;
     while(d % 2 == 0) {
         d = d/2;
         s = s + 1;
     }
-    long x = PowerMod(a, d, n);
+    int x = PowerMod(a, d, n);
     if(x == 1 || x == n-1) {
         return true;
     }
@@ -262,13 +262,13 @@ bool MR_test(long n, long a) {
     return false;
 }
 
-bool is_prime(long q) {
-    if(q < 4759123141l) {
+bool is_prime(int q) {
+    if(q < 1000000000) {
         return MR_test(q,2) && MR_test(q,7) && MR_test(q,61);
     }
     else {
         std::cerr << "You should be using FLINT." << std::endl;
-        std::vector<long> primes;
+        std::vector<int> primes;
         std::vector<int> exponents;
         factors(q, &primes, &exponents);
         if(primes.size() == 1 && exponents[0] == 1)
@@ -278,7 +278,7 @@ bool is_prime(long q) {
     }
 }
 
-long odd_part(long n) {
+int odd_part(int n) {
     if(n == 0) {
         return 1;
     }
@@ -288,13 +288,13 @@ long odd_part(long n) {
     return n;
 }
 
-long kronecker(long n, long m) {
+int kronecker(int n, int m) {
     if(GCD(n,m) != 1) {
         return 0;
     }
-    long t = 1;
+    int t = 1;
     while(m > 1) {
-        long m_odd, m_even;
+        int m_odd, m_even;
         m_odd = odd_part(m);
         m_even = m/m_odd;
         if(n % 8 == 3 || n % 8 == 5) {
@@ -308,7 +308,7 @@ long kronecker(long n, long m) {
         //}
         n = n % m_odd;
         if(odd_part(n) % 4 == 3 && m_odd % 4 == 3) t = -t;
-        long x = n;
+        int x = n;
         n = m_odd;
         m = x;
     }
@@ -320,10 +320,10 @@ long kronecker(long n, long m) {
 
 
 
-long kronecker2(long n, long m) {
-    long t = 1;
+int kronecker2(int n, int m) {
+    int t = 1;
     //cout << n << " " << m << " " << t << endl;
-    long m_even, m_odd;
+    int m_even, m_odd;
     m_odd = odd_part(m);
     m_even = m/m_odd;
     while(m > 2) {
@@ -333,7 +333,7 @@ long kronecker2(long n, long m) {
         n = n % m_odd;
         if(odd_part(n) % 4 == 3 && m_odd % 4 == 3) t = -t;
         //if(odd_part(m) % 4 == 3) t = -t;
-        long x = n;
+        int x = n;
         n = m_odd;
         m = x;
         //cout << n << " " << m << " " << t << endl;

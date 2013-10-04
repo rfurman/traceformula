@@ -37,7 +37,7 @@ typedef Matrix<long long,Dynamic,Dynamic,ColMajor> ZZMatrix;
 double to_double(long long x) { return x; }
 //double to_double(const mpz_int& x) { return x.convert_to<double>(); }
 
-#include "dirichlet.h"
+#include "characters.h"
 #include "trace_formula.h"
 
 //#define pow boost::multiprecision::pow
@@ -109,7 +109,7 @@ int main(void) {
         if(theoretical_TrT_bound(M,N,k)<1e18) {
             // Compute traces
             RRMatrix vals = allTrThat12new(M,N,k);
-            CCMatrix fourier = matrix_of_characters(N,k);
+            CCMatrix fourier = matrix_of_characters_by_parity(N,k);
             cout << "\rFourier transform              " << flush;
             CCMatrix vals2 = fourier * vals;
             cout << "\rDivision                       " << flush;

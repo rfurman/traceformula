@@ -53,7 +53,7 @@ struct enum_znstar {
 };
 
 
-CCMatrix matrix_of_characters(int N, int k) {
+CCMatrix matrix_of_characters_by_parity(int N, int k) {
     int phiN = phi(N);
     enum_znstar e1(N), e2(N);
     vector<vector<int> > ret(phiN, vector<int>(N));

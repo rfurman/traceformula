@@ -169,7 +169,6 @@ template<class i64> ZZMatrix allTrThat12(const int M, const int N, int k) {
 // Compute 12 times the fourier transform of the traces, sieved for newforms
 RRMatrix allTrThat12new(int M, int N, int k) {
     RRMatrix vals = RRMatrix::Zero(N,M);
-    CCMatrix fourier = matrix_of_characters(N,k);
     for(int d=1; d<=N; d++) if(N%d==0) {
         cout << "\rComputing forms of level " << N/d << "             " << endl;
         ZZMatrix vals2 = allTrThat12<long long>(M,N/d,k);

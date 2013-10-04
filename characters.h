@@ -1,14 +1,10 @@
 #include "slint.h"
 
-#include <complex>
-#include <cmath>
-#include <vector>
-
 using namespace std;
 
-inline std::complex<double> e(double z) {
-    std::complex<double>twopii(0,2*M_PI);
-    return std::exp(twopii * z);
+inline CC e(RR z) {
+    CC twopii(0,2*mpfr::const_pi());
+    return exp(twopii * z);
 }
 
 class DirichletGroup;
@@ -16,22 +12,22 @@ class DirichletGroup;
 
 class DirichletCharacter {
 public:
-    long m;         // the label
+    int m;         // the label
     DirichletGroup * parent;
 
     DirichletCharacter() {}
-    DirichletCharacter(DirichletGroup * parent_, long m_);
+    DirichletCharacter(DirichletGroup * parent_, int m_);
 
     ~DirichletCharacter() {}
-    long exponent(long n);
-    complex<double> max(long* index);
-    std::complex<double> value(long n);
+    int exponent(int n);
+    CC max(int* index);
+    CC value(int n);
     bool is_primitive();
     bool is_primitive_at_two();
     bool is_primitive_at_odd_part();
     bool is_even();
 
-    complex<double> gauss_sum();
+    CC gauss_sum();
 };
 
 
@@ -39,17 +35,17 @@ class DirichletGroup {
     //
     //
 public:
-    long q;         // the modulus
-    long q_odd;     // the odd part of the modulus
-    long q_even;
+    int q;         // the modulus
+    int q_odd;     // the odd part of the modulus
+    int q_even;
 
     int k;          // the number of odd prime factors of q
  
-    std::vector<long> * primes;
+    std::vector<int> * primes;
     std::vector<int> * exponents;
-    std::vector<long> * generators;
+    std::vector<int> * generators;
 
-    long ** A;      // exponent vectors:
+    int ** A;      // exponent vectors:
                     //      for each m coprime to q we store an array
                     //      with the property that
                     //
@@ -59,18 +55,18 @@ public:
                     //      and p[j] is the j-th prime factor of q.
                     //      (We don't actually store g[k], p[j], or e[j] anywhere.)
     
-    long * B;
+    int * B;
 
-    long * PHI;     // PHI[j] = phi(q/phi(p[j]**e[j])). This will make it easier
+    int * PHI;     // PHI[j] = phi(q/phi(p[j]**e[j])). This will make it easier
                     // to compute the characters.
 
-    long phi_q_odd;
-    long phi_q;     // phi(q)
+    int phi_q_odd;
+    int phi_q;     // phi(q)
 
-    std::complex<double> * zeta_powers_odd;     // zeta_powers[n] == e(n/phi(q))
-    std::complex<double> * zeta_powers_even;     // zeta_powers[n] == e(n/phi(q))
+    CC * zeta_powers_odd;     // zeta_powers[n] == e(n/phi(q))
+    CC * zeta_powers_even;     // zeta_powers[n] == e(n/phi(q))
     
-    DirichletGroup(long q_) : q(q_) {
+    DirichletGroup(int q_) : q(q_) {
         q_even = 1;
         q_odd = q;
         while(q_odd % 2 == 0) {
@@ -81,30 +77,30 @@ public:
         phi_q = euler_phi(q);
 
         if(q_odd > 1) {
-            primes = new std::vector<long>();
+            primes = new std::vector<int>();
             exponents = new std::vector<int>();
-            generators = new std::vector<long>();
+            generators = new std::vector<int>();
 
             factors(q_odd, primes, exponents);
             k = primes->size();
             phi_q_odd = euler_phi(q_odd);
             
-            PHI = new long[k];
-            A = new long*[q_odd];
+            PHI = new int[k];
+            A = new int*[q_odd];
             for(int n = 0; n < q_odd; n++) {
-                A[n] = new long[k];
+                A[n] = new int[k];
             }
-            zeta_powers_odd = new std::complex<double>[phi_q_odd];
+            zeta_powers_odd = new CC[phi_q_odd];
 
-            for(long j = 0; j < k; j++) {
-                long x = pow(primes->at(j), exponents->at(j));
-                long g = primitive_root(x);
+            for(int j = 0; j < k; j++) {
+                int x = pow(primes->at(j), exponents->at(j));
+                int g = primitive_root(x);
                 generators->push_back(g);
-                long phi = (pow(primes->at(j), exponents->at(j) - 1) * (primes->at(j) - 1));
+                int phi = (pow(primes->at(j), exponents->at(j) - 1) * (primes->at(j) - 1));
                 PHI[j] = phi_q_odd/phi;
-                long a = 1;
-                for(long l = 0; l < phi; l++) {
-                    for(long m = a; m < q_odd; m += x) {
+                int a = 1;
+                for(int l = 0; l < phi; l++) {
+                    for(int m = a; m < q_odd; m += x) {
                         A[m][j] = l;
                     }
                     a = (a * g) % x;
@@ -115,26 +111,26 @@ public:
             // for each m, 0 <= m < q, if (m,q) > 1, store
             // this as a flag in A[m][0]
             //
-            for(long m = 0; m < q_odd; m++) {
+            for(int m = 0; m < q_odd; m++) {
                 if(GCD(m,q_odd) > 1) {
                     A[m][0] = -1;
                 }
             }
 
-            for(long n = 0; n < phi_q_odd; n++) {
-                zeta_powers_odd[n] = e(n/(double)phi_q_odd);
+            for(int n = 0; n < phi_q_odd; n++) {
+                zeta_powers_odd[n] = e(n/(RR)phi_q_odd);
             }
         } // end of initialization of everything having to do
           // with q_odd
         
         if(q_even > 4) {
-            B = new long[q_even];
-            zeta_powers_even = new complex<double>[q_even/4];
-            for(long n = 0; n < q_even/4; n++) {
-                zeta_powers_even[n] = e(4*n/double(q_even));
+            B = new int[q_even];
+            zeta_powers_even = new CC[q_even/4];
+            for(int n = 0; n < q_even/4; n++) {
+                zeta_powers_even[n] = e(4*n/RR(q_even));
             }
-            long pow_three = 1;
-            for(long e = 0; e < q_even/4; e++) {
+            int pow_three = 1;
+            for(int e = 0; e < q_even/4; e++) {
                 B[pow_three] = e;
                 B[pow_three - 1] = 1;
                 B[q_even - pow_three] = e;
@@ -164,12 +160,12 @@ public:
         }
     }
 
-    long chi_odd_exponent(long m, long n) {
-        long x = 0;
+    int chi_odd_exponent(int m, int n) {
+        int x = 0;
         for(int j = 0; j < k; j++) {
             x += A[m][j]*A[n][j]*PHI[j];
             //x = x % phi_q_odd;
-            if(x > 4294967296)
+            if(x > 1000000000)
                 x = x % phi_q_odd;
         }
         if(x >= phi_q_odd) 
@@ -178,24 +174,24 @@ public:
         return x;
     }
     
-    long chi_even_exponent(long m, long n) {
-        long x = B[m]*B[n];
+    int chi_even_exponent(int m, int n) {
+        int x = B[m]*B[n];
         if(B[m-1] == -1 && B[n-1] == -1)
             x += q_even/8;
         return x % (q_even/4);
     }
 
-    std::complex<double> chi(long m, long n) {
-        complex<double> even_part = 1.0;
-        complex<double> odd_part = 1.0;
+    CC chi(int m, int n) {
+        CC even_part = (RR)1;
+        CC odd_part = (RR)1;
         if(q_even > 1) {
             if(m % 2 == 0 || n % 2 == 0) {
-                return 0;
+                return (RR)0;
             }
-            else if(q_even == 2) even_part = 1.0;
+            else if(q_even == 2) even_part = 1;
             else if(q_even == 4) {
-                if(m % 4 == 3 && n % 4 == 3) even_part = -1.0;
-                else even_part = 1.0;
+                if(m % 4 == 3 && n % 4 == 3) even_part = -1;
+                else even_part = 1;
             }
             else {
                 even_part = zeta_powers_even[chi_even_exponent(m % q_even, n % q_even)];
@@ -207,7 +203,7 @@ public:
             n %= q_odd;
         if(q_odd > 1) {
             if(A[m][0] == -1 || A[n][0] == -1)
-                return 0;
+                return (RR)0;
             else
                 odd_part = zeta_powers_odd[chi_odd_exponent(m, n)];
             if(q_even == 1)
@@ -216,14 +212,14 @@ public:
         return odd_part * even_part;
     }
 
-    //DirichletCharacter character(long m) {
+    //DirichletCharacter character(int m) {
     //    return DirichletCharacter(q, m, k, A, PHI, phi_q, zeta_powers);
     //}
-    DirichletCharacter character(long m) {
+    DirichletCharacter character(int m) {
         return DirichletCharacter(this, m);
     }
 
-    //DirichletCharacter * character(long n) {
+    //DirichletCharacter * character(int n) {
         //
         // return the character chi for which
         // chi(a) == e(n/(q-1))
@@ -233,13 +229,13 @@ public:
     //}
 
 
-    long exponent(long n, long m) {
+    int exponent(int n, int m) {
         //
         //Return the number a such that chi(n, m) = e(a/phi(q)).
         //
-        long e;
-        long odd_exponent;
-        long even_exponent;
+        int e;
+        int odd_exponent;
+        int even_exponent;
 
         if(q_odd > 1) {
             odd_exponent = chi_odd_exponent(n % q_odd, m % q_odd);
@@ -289,7 +285,7 @@ public:
 
 
 
-DirichletCharacter::DirichletCharacter(DirichletGroup * parent_, long m_) : parent(parent_), m(m_) {
+DirichletCharacter::DirichletCharacter(DirichletGroup * parent_, int m_) : parent(parent_), m(m_) {
         //
         // This doesn't actually do anything. Computing characters
         // using DirichletCharacter is not going to be any faster
@@ -297,57 +293,11 @@ DirichletCharacter::DirichletCharacter(DirichletGroup * parent_, long m_) : pare
         //
 }
 
-complex<double> DirichletCharacter::gauss_sum() {
-    complex<double> S = 0;
-    long q = parent->q;
-    complex<double> z = e(1.0/q);
-    complex<double> x = z;
-    for(long n = 1; n < q; n++) {
-        S = S + value(n) * x;
-        x = x * z;
-    }
-    return S;
-}
-
-complex<double> DirichletCharacter::max(long * index) {
-    // return the max of the partial sums of the character,
-    // and set *index to the spot where the max occurs,
-    // unless index = 0
-    //
-    // note that *index is always <= (q-1)/2
-    
-    //if(parent->A[m][0] == -1) {
-    //    if(index != 0){
-    //        *index = -1;
-    //    }
-    //    return 0;
-    //}
-
-    std::complex<double> S(0,0);
-    double absmax = 0.0;
-    complex<double> current_max = 0.0;
-    long max_location;
-
-    for(long n = 0; n <= (parent->q-1)/2; n++) {
-        S = S + value(n);
-        if(abs(S) > absmax) {
-            absmax = abs(S);
-            current_max = S;
-            max_location = n;
-        }
-    }
-
-    if(index != 0) {
-        *index = max_location;
-    }
-    return current_max;
-}
-
-long DirichletCharacter::exponent(long n) {
-    long x = 0;
+int DirichletCharacter::exponent(int n) {
+    int x = 0;
     for(int j = 0; j < parent->k; j++) {
         x += parent->A[m][j]*parent->A[n][j]*parent->PHI[j];
-        if(x > 4294967296)
+        if(x > 1000000000)
             x = x % parent->phi_q;
     }
     if(x >= parent->phi_q) {
@@ -356,7 +306,7 @@ long DirichletCharacter::exponent(long n) {
     return x;
 }
 
-std::complex<double> DirichletCharacter::value(long n) {
+CC DirichletCharacter::value(int n) {
     return parent->chi(m,n);
     //if(parent->A[m][0] == -1 || parent->A[n][0] == -1)
     //    return 0;
@@ -375,7 +325,7 @@ bool DirichletCharacter::is_primitive_at_odd_part() {
     // is primitive at every prime.
     if(parent->q_odd == 1) return true;
     else {
-        long n = m % parent->q_odd;
+        int n = m % parent->q_odd;
         if(parent->A[n][0] == -1) return false;
         for(int j = 0; j < parent->k; j++) {
             if(parent->A[n][j] % parent->primes->at(j) == 0)
@@ -386,9 +336,9 @@ bool DirichletCharacter::is_primitive_at_odd_part() {
 }
 
 bool DirichletCharacter::is_primitive_at_two() {
-    long q_even = parent->q_even;
-    long * B = parent->B;
-    long n = m % q_even;
+    int q_even = parent->q_even;
+    int * B = parent->B;
+    int n = m % q_even;
     if(q_even == 1) return true;
     else if(q_even == 2) return false;
     else if(q_even == 4) return n == 3;
@@ -410,6 +360,22 @@ bool DirichletCharacter::is_even() {
     // +-1 we can just check which of these it is closest to.
     //
     
-    return abs(value(parent->q - 1) - 1.0) < .5;
+    return abs(value(parent->q - 1) - (RR)1) < .5;
 }
 
+// Return a matrix of the character values for the characters with the same parity as k
+CCMatrix matrix_of_characters_by_parity(int q, int k) {
+    int nchi = 0;
+    DirichletGroup dg(q);
+    CCMatrix mat(q,q);
+    for(int i=1; i<=dg.phi_q; i++) {
+        if(dg.character(i).is_even() ^ (k%2)) {
+            for(int j=0; j<q; j++) {
+                mat(nchi,j) = dg.chi(i,j);
+            }
+            nchi++;
+        }
+    }
+    mat.conservativeResize(nchi,q);
+    return mat;
+}
