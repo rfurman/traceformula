@@ -25,12 +25,55 @@ typedef long i64;
 
 //typedef double Real;
 
+typedef long ZZ;
 typedef mpfr::mpreal RR;
 typedef complex<RR> CC;
+
+
+// I thought this would fix RRMatrix*ZZMatrix, but it is not enough
+namespace Eigen {
+namespace internal {
+template<> struct scalar_product_traits<RR,ZZ>
+{
+  enum {
+    // Cost = 2*NumTraits<T>::MulCost,
+    Defined = 1
+  };
+  typedef RR ReturnType;
+};
+
+template<> struct scalar_product_traits<CC,ZZ>
+{
+  enum {
+    // Cost = 2*NumTraits<T>::MulCost,
+    Defined = 1
+  };
+  typedef CC ReturnType;
+};
+
+}
+}
+
+CC operator*(CC A, const ZZ& B) {
+    A *= B;
+    return A;
+}
 
 typedef Matrix<CC,Dynamic,Dynamic> CCMatrix;
 typedef Matrix<RR,Dynamic,Dynamic> RRMatrix;
 typedef Matrix<long,Dynamic,Dynamic,ColMajor> ZZMatrix;
+
+template<class T> CCMatrix explicit_product(const T& fourier_matrix, const ZZMatrix& mat) {
+    CCMatrix ret = CCMatrix::Zero(fourier_matrix.rows(), mat.cols());
+    assert(fourier_matrix.cols() == mat.rows());
+    for(int i=0; i<fourier_matrix.rows(); i++)
+        for(int j=0; j<mat.rows(); j++)
+            for(int k=0; k<mat.cols(); k++)
+                ret(i,k) += fourier_matrix(i,j)*mat(j,k);
+    return ret;
+}
+
+
 
 #include "number_theoretic.h"
 
@@ -44,14 +87,13 @@ double to_double(long x) { return x; }
 //#define pow boost::multiprecision::pow
 
 // Divide through by coefficient of 1
-CCMatrix adjust(CCMatrix mat) {
+void adjust(CCMatrix& mat) {
     for(int r=0; r<mat.rows(); r++) {
         for(int c=2; c<mat.cols(); c++) {
             mat(r,c) /= mat(r,1);
         }
         mat(r,1)=1;
     }
-    return mat;
 }
 
 // Compute a(m)*a(n) via multiplicativity relations with character chi
@@ -60,7 +102,7 @@ template<class T, class U> CC prod2(const T& a, const U& chi, int m, int n, int 
     int g = __gcd(m,n);
     CC ret;
     for(int d=1; d<=g; d++) if(g%d==0) {
-        int dk=1; // d^(k-1)
+        i64 dk=1; // d^(k-1)
         for(int i=0; i<k-1; i++) dk*=d;
         ret += a(m*n/d/d)*RR(dk)*chi(d%chi.cols());
     }
@@ -71,7 +113,7 @@ template<class T, class U> CC prod3(const T& a, const U& chi, int m, int n, int 
     int g = __gcd(m,n);
     CC ret;
     for(int d=1; d<=g; d++) if(g%d==0) {
-        int dk=1; // d^(k-1)
+        i64 dk=1; // d^(k-1)
         for(int i=0; i<k-1; i++) dk*=d;
         ret += prod2(a,chi,m*n/d/d,p,k)*RR(dk)*chi(d%chi.cols());
     }
@@ -122,16 +164,17 @@ int main(void) {
 
         if(theoretical_TrT_bound(M,N,k)<1e18) {
             // Compute traces
-            RRMatrix vals = allTrThat12new(M,N,k);
+            ZZMatrix vals = allTrThat12new(M,N,k);
             CCMatrix fourier = matrix_of_characters_by_parity(N,k);
-            cout << "\rFourier transform              " << flush;
-            CCMatrix vals2 = fourier * vals;
-            cout << "\rDivision                       " << flush;
-            vals2 /= CC(12*phiN);
 
             for(int chi=0; chi<fourier.rows(); chi++) {
-                int dim = round(vals2(chi,1).real()).toLong();
-                if(abs(vals2(chi,1)-(RR)dim)>0.0001) abort();
+                cout << "\rFourier transform              " << flush;
+                CCMatrix vals2 = explicit_product(fourier.row(chi), vals);
+                cout << "\rDivision                       " << flush;
+                vals2 /= CC(12*phiN);
+
+                int dim = round(vals2(0,1).real()).toLong();
+                if(abs(vals2(0,1)-(RR)dim)>0.0001) abort();
                 int number_good=0, number_bad=0;
                 if(dim==0) {
                     cout << "\rComputing dimension " << dim << " eigenbasis with character #" << chi+1 << endl;
@@ -142,13 +185,13 @@ int main(void) {
 
                 cout << "\rPicking c matrix                                " << flush;
                 vector<int> rel_primes;
-                CCMatrix c(0,0);
+                CCMatrix c(dim,dim);
                 for(int i=1; rel_primes.size()<dim; i++) if(__gcd(i,N)==1) {
                     rel_primes.push_back(i);
-                    c.conservativeResize(rel_primes.size(), rel_primes.size());
+                    //c.conservativeResize(rel_primes.size(), rel_primes.size());
                     int j=rel_primes.size()-1;
-                    for(int i=0; i<rel_primes.size(); i++) c(i,j)=c(j,i)=prod2(vals2.row(chi),fourier.row(chi),rel_primes[i],rel_primes[j],k);
-                    if(abs(c.determinant())<0.000001) rel_primes.pop_back();
+                    for(int i=0; i<rel_primes.size(); i++) c(i,j)=c(j,i)=prod2(vals2.row(0),fourier.row(chi),rel_primes[i],rel_primes[j],k);
+                    if(abs(c.topLeftCorner(j+1,j+1).determinant())<0.000001) rel_primes.pop_back();
                 }
                 if(rel_primes.back()>dim) {
                     cout << "\rHad to skip " << rel_primes.back()-dim << " elements to get a rank " << dim << " c-matrix" << endl;
@@ -175,7 +218,7 @@ int main(void) {
                     if(__gcd(p,N)>1) continue;
                     if(rel_primes.back()*rel_primes.back()*p>vals2.cols()) break;
                     for(int i=0; i<dim; i++) for(int j=0; j<dim; j++) {
-                        CC x = prod3(vals2.row(chi),fourier.row(chi),rel_primes[i],rel_primes[j],p,k)*RR(log(p+0.))*sqrtchi[rel_primes[i]]*sqrtchi[rel_primes[j]]*sqrtchi[p];
+                        CC x = prod3(vals2.row(0),fourier.row(chi),rel_primes[i],rel_primes[j],p,k)*RR(log(p+0.))*sqrtchi[rel_primes[i]]*sqrtchi[rel_primes[j]]*sqrtchi[p];
                         assert(x.imag()<0.00001);
                         Tp(i,j)+=x.real();
                     }
@@ -193,7 +236,7 @@ int main(void) {
                 if(l>1) cout << "\rUsing " << l << " hecke matrices to be conservative         " << endl;
                 cout << "\rLoading big data                  " << flush;
                 CCMatrix bb(dim, M/rel_primes.back());
-                for(int i=0; i<dim; i++) for(int j=0; j<M/rel_primes.back(); j++) bb(i,j)=prod2(vals2.row(chi),fourier.row(chi),rel_primes[i],j,k);
+                for(int i=0; i<dim; i++) for(int j=0; j<M/rel_primes.back(); j++) bb(i,j)=prod2(vals2.row(0),fourier.row(chi),rel_primes[i],j,k);
                 cout << "\rBasic lin alg                  " << flush;
                 //CCMatrix v = (c.inverse() * Tp);
 
@@ -214,7 +257,9 @@ int main(void) {
                 for(int i=0; i<dim; i++)
                     for(int j=0; j<dim; j++)
                         vC(i,j) = vR(i,j) * sqrtchi[rel_primes[j]];
-                CCMatrix results = adjust(vC * bb);
+                CCMatrix results;
+                results.noalias() = vC * bb;
+                adjust(results);
                 //cout << results << endl;
                 //cout << ces.eigenvalues() << endl;
 
@@ -230,11 +275,11 @@ int main(void) {
                         continue;
                     }
                     for(int j=1; j<results.cols(); j++) {
-                      //for(int l=1; j*l<results.cols(); l++) {
-                        int l = abs(rand())%((results.cols()-1)/j)+1;
+                      for(int l=1; j*l<results.cols(); l++) {
+                        //int l = abs(rand())%((results.cols()-1)/j)+1;
                         CC A = results(i,j)*results(i,l);
                         CC B = prod2(results.row(i),fourier.row(chi),j,l,k);
-                        if(!close_enough(A,B) && __gcd(j,N)==1 && __gcd(l,N)==1 ) {
+                        if(!close_enough(A,B) && __gcd(j,N)==1) {// && __gcd(l,N)==1 ) {
                             if(true || good) {
                                 cout << chi << " " << i << " " << j << " " << l << " " << A << " " << B << " " << results(i,j) << " " << results(i,l) << " " << results(i,j*l) << endl;
                                 cout << fourier.row(chi) << endl;
@@ -242,6 +287,7 @@ int main(void) {
                             }
                             good=false;
                         }
+                      }
                     }
                     if(!good) {
                         cout << "\rFailed multiplicativity check        " << flush;

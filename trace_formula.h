@@ -142,7 +142,7 @@ template<class i64> ZZMatrix allTrThat12(const int M, const int N, int k) {
         for(int t=1; t<M; t++) {
             for(int i=0; i<phiN; i++) {
                 int a = rel_prime[i];
-                for(int n=t; n<M; n+=t) {
+                for(int n=t; n<M; n+=t) if(__gcd(N,n/t)==1) {
                     vals.coeffRef(a,n) += 12*t;
                 }
             }
@@ -170,8 +170,8 @@ template<class i64> ZZMatrix allTrThat12(const int M, const int N, int k) {
 }
 
 // Compute 12 times the fourier transform of the traces, sieved for newforms
-RRMatrix allTrThat12new(int M, int N, int k) {
-    RRMatrix vals = RRMatrix::Zero(N,M);
+ZZMatrix allTrThat12new(int M, int N, int k) {
+    ZZMatrix vals = ZZMatrix::Zero(N,M);
     for(int d=1; d<=N; d++) if(N%d==0) {
         cout << "\rComputing forms of level " << N/d << "             " << endl;
         ZZMatrix vals2 = allTrThat12<long>(M,N/d,k);
@@ -183,7 +183,7 @@ RRMatrix allTrThat12new(int M, int N, int k) {
                 int dinv=0;
                 for(int i=0; i<N/d; i++) if((d*i)%(N/d)==1) dinv=i;
                 //if(N/d>1) assert(dinv);
-                int dk=1; // d^(k-1)
+                i64 dk=1; // d^(k-1)
                 for(int i=0; i<k-1; i++) dk*=d;
                 vals(y,n) -= mobius2[prime_to_n_part] * mobius[d/prime_to_n_part] * vals2((y*dinv)%(N/d),n/d/d) * dk;
             }
