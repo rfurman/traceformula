@@ -186,16 +186,26 @@ int main(void) {
                 cout << "\rPicking c matrix                                " << flush;
                 vector<int> rel_primes;
                 CCMatrix c(dim,dim);
+
                 for(int i=1; rel_primes.size()<dim; i++) if(__gcd(i,N)==1) {
                     rel_primes.push_back(i);
-                    //c.conservativeResize(rel_primes.size(), rel_primes.size());
                     int j=rel_primes.size()-1;
                     for(int i=0; i<rel_primes.size(); i++) c(i,j)=c(j,i)=prod2(vals2.row(0),fourier.row(chi),rel_primes[i],rel_primes[j],k);
-                    if(abs(c.topLeftCorner(j+1,j+1).determinant())<0.000001) rel_primes.pop_back();
                 }
-                if(rel_primes.back()>dim) {
+ 
+                if(abs(c.determinant())<0.000001) {
+                    // If the candidate matrix is not invertible, build it up instead more conservatively
+                    //    keeping full rank at each step.
+                    rel_primes.clear();
+                    for(int i=1; rel_primes.size()<dim; i++) if(__gcd(i,N)==1) {
+                        rel_primes.push_back(i);
+                        int j=rel_primes.size()-1;
+                        for(int i=0; i<rel_primes.size(); i++) c(i,j)=c(j,i)=prod2(vals2.row(0),fourier.row(chi),rel_primes[i],rel_primes[j],k);
+                        if(abs(c.topLeftCorner(j+1,j+1).determinant())<0.000001) rel_primes.pop_back();
+                    }
                     cout << "\rHad to skip " << rel_primes.back()-dim << " elements to get a rank " << dim << " c-matrix" << endl;
                 }
+                
 
                 // Number of sqrt(chi) to generate
                 int Nchi = max(rel_primes.back(), (int)vals2.cols()/rel_primes.back()/rel_primes.back())+1;
