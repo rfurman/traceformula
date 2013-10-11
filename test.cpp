@@ -25,24 +25,29 @@ int main(int argc, char **argv) {
         mat2(i,j) = mat2(j,i) = rand()/65536./65536.;
     }
     cout << "Product" << endl;
-    //Matrix<scalar,Dynamic,Dynamic> mat=mat2.inverse()*mat1;
+    Matrix<scalar,Dynamic,Dynamic> mat=mat2.inverse()*mat1;
 
     if(argv[1][0]=='D') {
         cout << "Diagonalisation" << endl;
-        //Eigen::ComplexEigenSolver<Matrix<scalar,Dynamic,Dynamic> > ces(mat);
-        //cout << setprecision(0) << ces.eigenvalues() << endl;
+        Eigen::EigenSolver<Matrix<scalar,Dynamic,Dynamic> > ces(mat);
+        cout << setprecision(0) << ces.eigenvalues() << endl;
+	cout << setprecision(0) << ces.eigenvectors() * mat * ces.eigenvectors().transpose() << endl;
     }
 
     if(argv[1][0]=='G') {
         cout << "General Diagonalisation" << endl;
-        //Eigen::GeneralizedEigenSolver<Matrix<scalar,Dynamic,Dynamic> > ces(mat1, mat2);
-        //cout << setprecision(0) << ces.eigenvalues() << endl;
+        Eigen::GeneralizedEigenSolver<Matrix<scalar,Dynamic,Dynamic> > ces(mat1, mat2);
+        cout << setprecision(0) << ces.eigenvalues() << endl;
     }
 
     if(argv[1][0]=='S') {
         cout << "General Diagonalisation" << endl;
         Eigen::GeneralizedSelfAdjointEigenSolver<Matrix<scalar,Dynamic,Dynamic> > ces(mat1, mat2);
-        //cout << setprecision(0) << ces.eigenvalues() << endl;
+        cout << setprecision(0) << ces.eigenvalues() << endl << endl;
+	cout << setprecision(0) << ces.eigenvectors().inverse() * mat2.inverse() * mat1 * ces.eigenvectors() << endl << endl;
+	cout << setprecision(0) << ces.eigenvectors().inverse() * mat1.inverse() * mat2 * ces.eigenvectors() << endl << endl;
+	cout << setprecision(0) << ces.eigenvectors().inverse() * mat2 * mat1.inverse() * ces.eigenvectors() << endl << endl;
+	cout << setprecision(0) << ces.eigenvectors().inverse() * mat1 * mat2.inverse() * ces.eigenvectors() << endl << endl;
     }
 
 

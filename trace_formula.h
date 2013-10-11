@@ -95,7 +95,7 @@ template<class i64> ZZMatrix allTrThat12(const int M, const int N, int k) {
                     do { X/=p; c++; } while(X%p==0);
                     int a = valuation(N, p);
                     int d = valuation(y*y-t*y+n, p);
-                    int S3 = 0;
+                    long S3 = 0;
                     int kDp = p-kross(D,p);
 
                     if(a==0) {
@@ -119,8 +119,8 @@ template<class i64> ZZMatrix allTrThat12(const int M, const int N, int k) {
     // A3
     // Bounded by 12*M^(k/2+1/2)*log(M)*log(N)
     if(msk&4) for(int d=1; d<M; d++) {
-        for(int n=d; n<min(M,d*d+1); n+=d) {
-            i64 p = pow((i64)min(d,n/d),k-1);
+        for(int n=d; n<min((long)M,(long)d*d+1); n+=d) {
+            i64 p = pow(min(d,n/d),k-1);
             int S2=0;
             for(int i=0; i<phiN; i++) {
                 int a=rel_prime[i];
@@ -175,6 +175,10 @@ ZZMatrix allTrThat12new(int M, int N, int k) {
     for(int d=1; d<=N; d++) if(N%d==0) {
         cout << "\rComputing forms of level " << N/d << "             " << endl;
         ZZMatrix vals2 = allTrThat12<long>(M,N/d,k);
+	//if(d==1)
+            //for(int a=0; a<vals2.rows(); a++)
+                //for(int b=0; b<vals2.cols(); b++)
+                    //cout << a<< " " << b << " : " << vals2(a,b) << endl;
         for(int y=0; y<N; y++) if(true||__gcd(N,y)==1) for(int n=0; n<M; n++) {
             int prime_to_n_part = d;
             while(__gcd(prime_to_n_part,n)>1) prime_to_n_part /= __gcd(prime_to_n_part,n);

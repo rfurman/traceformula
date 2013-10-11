@@ -104,7 +104,7 @@ template<class T, class U> CC prod2(const T& a, const U& chi, int m, int n, int 
     for(int d=1; d<=g; d++) if(g%d==0) {
         i64 dk=1; // d^(k-1)
         for(int i=0; i<k-1; i++) dk*=d;
-        ret += a(m*n/d/d)*RR(dk)*chi(d%chi.cols());
+        ret += a(m/d*n/d)*RR(dk)*chi(d%chi.cols());
     }
     return ret;
 } 
@@ -115,7 +115,7 @@ template<class T, class U> CC prod3(const T& a, const U& chi, int m, int n, int 
     for(int d=1; d<=g; d++) if(g%d==0) {
         i64 dk=1; // d^(k-1)
         for(int i=0; i<k-1; i++) dk*=d;
-        ret += prod2(a,chi,m*n/d/d,p,k)*RR(dk)*chi(d%chi.cols());
+        ret += prod2(a,chi,m/d*n/d,p,k)*RR(dk)*chi(d%chi.cols());
     }
     return ret;
 } 
@@ -123,7 +123,7 @@ template<class T, class U> CC prod3(const T& a, const U& chi, int m, int n, int 
 
 
 template<class T> bool close_enough(const T& A, const T& B) {
-    return abs(A-B) < 0.00001 * (abs(A)+abs(B)+1);
+    return abs(A-B) < 1e-100 * (abs(A)+abs(B)+1);
 }
 
 int main(void) {
@@ -165,6 +165,9 @@ int main(void) {
         if(theoretical_TrT_bound(M,N,k)<1e18) {
             // Compute traces
             ZZMatrix vals = allTrThat12new(M,N,k);
+            //for(int a=0; a<vals.rows(); a++)
+                //for(int b=0; b<vals.cols(); b++)
+                    //cout << a<< " " << b << " : " << vals(a,b) << endl;
             CCMatrix fourier = matrix_of_characters_by_parity(N,k);
 
             for(int chi=0; chi<fourier.rows(); chi++) {
@@ -223,8 +226,10 @@ int main(void) {
                 cout << "\rComputing matrix to diagonalize                              " << flush;
                 RRMatrix Tp=RRMatrix::Zero(dim,dim);
                 int l;
+		int hecke_matrices_used = 0;
                 for(l=0; l<primes_list.size(); l++) {
                     int p = primes_list[l];
+                    if(p==2) continue;
                     if(__gcd(p,N)>1) continue;
                     if(rel_primes.back()*rel_primes.back()*p>vals2.cols()) break;
                     for(int i=0; i<dim; i++) for(int j=0; j<dim; j++) {
@@ -232,7 +237,9 @@ int main(void) {
                         assert(x.imag()<0.00001);
                         Tp(i,j)+=x.real();
                     }
-                    //break;
+                    if(++hecke_matrices_used > 10) {
+                        break;
+                    }
                 }
 
                 cout << "\rConverting c to real matrix                  " << flush;
@@ -243,7 +250,7 @@ int main(void) {
                     cR(i,j) = x.real();
                 }
 
-                if(l>1) cout << "\rUsing " << l << " hecke matrices to be conservative         " << endl;
+                if(hecke_matrices_used>1) cout << "\rUsing " << hecke_matrices_used << " hecke matrices to be conservative         " << endl;
                 cout << "\rLoading big data                  " << flush;
                 CCMatrix bb(dim, M/rel_primes.back());
                 for(int i=0; i<dim; i++) for(int j=0; j<M/rel_primes.back(); j++) bb(i,j)=prod2(vals2.row(0),fourier.row(chi),rel_primes[i],j,k);
@@ -261,6 +268,7 @@ int main(void) {
                 }*/
                 cout << "\rSolve for eigenvectors           " << flush;
                 Eigen::GeneralizedSelfAdjointEigenSolver<RRMatrix > ces(Tp, cR);
+                assert(ces.info()==Success);
                 cout << "\rCompute result                        " << flush;
                 RRMatrix vR = ces.eigenvectors().transpose();
                 CCMatrix vC = CCMatrix(dim,dim);
@@ -284,19 +292,21 @@ int main(void) {
                         number_bad++;
                         continue;
                     }
-                    for(int j=1; j<results.cols(); j++) {
-                      for(int l=1; j*l<results.cols(); l++) {
-                        //int l = abs(rand())%((results.cols()-1)/j)+1;
-                        CC A = results(i,j)*results(i,l);
-                        CC B = prod2(results.row(i),fourier.row(chi),j,l,k);
-                        if(!close_enough(A,B) && __gcd(j,N)==1) {// && __gcd(l,N)==1 ) {
+                    for(int j=2; j<results.cols(); j++) {
+                      for_prime_factors(j) {
+                          int j1=j, j2=1;
+                          while(j1%p==0) j1/=p, j2*=p;
+                          CC A = results(i,j1)*results(i,j2);
+                          CC B = results(i,j);
+                          if(!close_enough(A,B) && __gcd(j,N)==1) {// && __gcd(l,N)==1 ) {
                             if(true || good) {
-                                cout << chi << " " << i << " " << j << " " << l << " " << A << " " << B << " " << results(i,j) << " " << results(i,l) << " " << results(i,j*l) << endl;
-                                cout << fourier.row(chi) << endl;
+                                cout << setprecision(0) << chi << " " << i << " " << j1 << " " << j2 << " " << A << " " << B << " " << results(i,j1) << " " << results(i,j2) << " " << results(i,j) << endl;
+                                //cout << setprecision(0) << fourier.row(chi) << endl;
                                 //assert(false);
                             }
                             good=false;
-                        }
+                          }
+                          break;
                       }
                     }
                     if(!good) {

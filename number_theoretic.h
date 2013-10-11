@@ -12,7 +12,7 @@ long pow(long x, int y) {
 }
 
 
-int pow(int x, int y) {
+long pow(int x, int y) {
     if(y==0) return 1;
     long ret = pow(x,y/2);
     ret *= ret;
@@ -22,7 +22,7 @@ int pow(int x, int y) {
 int psi(int N) {
     int ret=N;
     for_prime_factors(N) {
-        ret = ret * (p+1)/p;
+        ret += ret/p;
         do { N/=p; } while(N%p==0);
     }
     return ret;
@@ -31,7 +31,7 @@ int psi(int N) {
 int phi(int N) {
     int ret=N;
     for_prime_factors(N) {
-        ret = ret * (p-1)/p;
+        ret -= ret/p;
         do { N/=p; } while(N%p==0);
     }
     return ret;
